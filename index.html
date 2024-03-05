@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Display</title>
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h2>Products</h2>
+    <div class="mb-3">
+      <button id="sort-popularity" class="btn btn-success mr-2">Sort by Popularity</button>
+      <button id="sort-name" class="btn btn-success ml-2">Sort by Name</button>
+      <button id="sort-price" class="btn btn-success ml-2">Sort by Price</button>
+    </div>
+    <div id="pagination" class="mt-3 mb-3"></div>
+    <div id="product-list" class="row"></div>
+    
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      let currentPage = 1;
+      let productsData = [];
+
+      fetch('https://s3.amazonaws.com/open-to-cors/assignment.json')
+        .then(response => response.json())
+        .then(data => {
+          productsData = Object.values(data.products);
+          displayProducts(currentPage);
+        })
+        .catch(error => console.error('Error fetching data:', error));
+
+      function displayProducts(page) {
+        const productsPerPage = 50;
+        const start = (page - 1) * productsPerPage;
+        const end = start + productsPerPage;
+        const productsToShow = productsData.slice(start, end);
+        const totalPages = Math.ceil(productsData.length / productsPerPage);
+
+        const productList = document.getElementById('product-list');
+        productList.innerHTML = ''; // Clear previous products
+
+        productsToShow.forEach(product => {
+          const productCard = document.createElement('div');
+          productCard.classList.add('col-md-4', 'mb-3');
+
+          const priceFormatted = formatPrice(product.price);
+
+          productCard.innerHTML = `
+            <div class="card">
+              <div class="card-body">
+                <h5 class="card-title">${product.title}</h5>
+                <p class="card-text">Price: $${priceFormatted}</p>
+                <p class="card-text">Popularity: ${product.popularity}</p>
+              </div>
+            </div>
+          `;
+
+          productList.appendChild(productCard);
+        });
+
+        renderPagination(totalPages, currentPage);
+      }
+
+      function renderPagination(totalPages, currentPage) {
+  const paginationContainer = document.getElementById('pagination');
+  paginationContainer.innerHTML = '';
+
+  for (let i = 1; i <= totalPages; i++) {
+    const pageButton = document.createElement('button');
+    pageButton.classList.add('btn', 'btn-outline-primary', 'mr-2');
+    pageButton.textContent = i;
+    
+    // Remove the active class from all buttons before adding it to the current page button
+    if (i === currentPage) {
+      pageButton.classList.add('active');
+    } else {
+      pageButton.classList.remove('active');
+    }
+
+    pageButton.addEventListener('click', () => {
+      currentPage = i;
+      displayProducts(currentPage);
+      renderPagination(totalPages, currentPage); // Update pagination buttons after clicking
+    });
+    paginationContainer.appendChild(pageButton);
+  }
+}
+
+      function formatPrice(price) {
+        return Number(price).toLocaleString('en-US');
+      }
+
+      // Sorting functions
+      document.getElementById('sort-popularity').addEventListener('click', () => {
+        productsData.sort((a, b) => b.popularity - a.popularity);
+        displayProducts(currentPage);
+      });
+
+      document.getElementById('sort-name').addEventListener('click', () => {
+        productsData.sort((a, b) => a.title.localeCompare(b.title));
+        displayProducts(currentPage);
+      });
+
+      document.getElementById('sort-price').addEventListener('click', () => {
+        productsData.sort((a, b) => a.price - b.price);
+        displayProducts(currentPage);
+      });
+    });
+  </script>
+</body>
+</html>
